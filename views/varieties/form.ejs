@@ -1,0 +1,127 @@
+<%- include('../header', { title: variety ? 'Edit Variety' : 'New Variety' }) %>
+
+<div class="max-w-2xl">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800"><%= variety ? 'Edit' : 'New' %> Variety</h1>
+    <% if (variety) { %>
+      <button onclick="deleteRecord('/api/varieties/<%= variety.id %>', '/varieties')" class="btn btn-danger btn-sm">Delete</button>
+    <% } %>
+  </div>
+
+  <form id="variety-form" class="card space-y-4">
+    <div>
+      <label class="form-label" for="name">Name *</label>
+      <input type="text" id="name" name="name" required class="form-input"
+             value="<%= variety ? variety.name : '' %>" placeholder='e.g. "Zinnia - Queen Red Lime"'>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="form-label" for="type">Type</label>
+        <select id="type" name="type" class="form-input">
+          <option value="">Select...</option>
+          <option value="Annual" <%= variety && variety.type === 'Annual' ? 'selected' : '' %>>Annual</option>
+          <option value="Perennial" <%= variety && variety.type === 'Perennial' ? 'selected' : '' %>>Perennial</option>
+          <option value="Biennial" <%= variety && variety.type === 'Biennial' ? 'selected' : '' %>>Biennial</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label" for="color">Color</label>
+        <input type="text" id="color" name="color" class="form-input"
+               value="<%= variety ? variety.color || '' : '' %>" placeholder="e.g. Pink">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <label class="form-label" for="days_to_germination">Days to Germ.</label>
+        <input type="number" id="days_to_germination" name="days_to_germination" class="form-input"
+               value="<%= variety ? variety.days_to_germination || '' : '' %>">
+      </div>
+      <div>
+        <label class="form-label" for="days_to_transplant">Days to Transplant</label>
+        <input type="number" id="days_to_transplant" name="days_to_transplant" class="form-input"
+               value="<%= variety ? variety.days_to_transplant || '' : '' %>">
+      </div>
+      <div>
+        <label class="form-label" for="days_to_bloom">Days to Bloom</label>
+        <input type="number" id="days_to_bloom" name="days_to_bloom" class="form-input"
+               value="<%= variety ? variety.days_to_bloom || '' : '' %>">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="form-label" for="spacing_inches">Spacing (inches)</label>
+        <input type="number" id="spacing_inches" name="spacing_inches" class="form-input"
+               value="<%= variety ? variety.spacing_inches || '' : '' %>">
+      </div>
+      <div>
+        <label class="form-label" for="light_requirement">Light Requirement</label>
+        <select id="light_requirement" name="light_requirement" class="form-input">
+          <option value="">Select...</option>
+          <option value="Full Sun" <%= variety && variety.light_requirement === 'Full Sun' ? 'selected' : '' %>>Full Sun</option>
+          <option value="Partial Shade" <%= variety && variety.light_requirement === 'Partial Shade' ? 'selected' : '' %>>Partial Shade</option>
+          <option value="Full Shade" <%= variety && variety.light_requirement === 'Full Shade' ? 'selected' : '' %>>Full Shade</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <input type="checkbox" id="pinch" name="pinch" class="w-4 h-4 rounded border-gray-300"
+             <%= variety && variety.pinch ? 'checked' : '' %>>
+      <label for="pinch" class="text-sm text-gray-700">Pinch this variety</label>
+    </div>
+
+    <div>
+      <label class="form-label" for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="3" class="form-input"><%= variety ? variety.notes || '' : '' %></textarea>
+    </div>
+
+    <div class="flex gap-2 pt-2">
+      <button type="submit" class="btn btn-primary"><%= variety ? 'Save Changes' : 'Create Variety' %></button>
+      <a href="/varieties" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+document.getElementById('variety-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const data = {
+    name: form.name.value,
+    type: form.type.value,
+    color: form.color.value,
+    days_to_germination: form.days_to_germination.value ? parseInt(form.days_to_germination.value) : null,
+    days_to_transplant: form.days_to_transplant.value ? parseInt(form.days_to_transplant.value) : null,
+    days_to_bloom: form.days_to_bloom.value ? parseInt(form.days_to_bloom.value) : null,
+    spacing_inches: form.spacing_inches.value ? parseInt(form.spacing_inches.value) : null,
+    light_requirement: form.light_requirement.value,
+    pinch: form.pinch.checked ? 1 : 0,
+    notes: form.notes.value
+  };
+
+  const isEdit = <%= variety ? 'true' : 'false' %>;
+  const url = isEdit ? '/api/varieties/<%= variety ? variety.id : '' %>' : '/api/varieties';
+  const method = isEdit ? 'PUT' : 'POST';
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      window.location.href = '/varieties';
+    } else {
+      const err = await res.json();
+      alert(err.error || 'Failed to save');
+    }
+  } catch (e) {
+    alert('Failed to save variety');
+  }
+});
+</script>
+
+<%- include('../footer') %>

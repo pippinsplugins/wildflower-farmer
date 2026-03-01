@@ -1,0 +1,176 @@
+<%- include('../header', { title: batch ? 'Edit Batch' : 'New Batch' }) %>
+
+<div class="max-w-2xl">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800"><%= batch ? 'Edit Batch' : 'New Batch' %></h1>
+    <% if (batch) { %>
+      <button onclick="deleteRecord('/api/batches/<%= batch.id %>', '/batches')" class="btn btn-danger btn-sm">Delete</button>
+    <% } %>
+  </div>
+
+  <form id="batch-form" class="card space-y-4">
+    <% if (batch) { %>
+      <div>
+        <label class="form-label">Batch Code</label>
+        <p class="font-mono text-gray-600"><%= batch.batch_code %></p>
+      </div>
+    <% } %>
+
+    <div>
+      <label class="form-label" for="variety_id">Variety *</label>
+      <select id="variety_id" name="variety_id" required class="form-input">
+        <option value="">Select variety...</option>
+        <% varieties.forEach(v => { %>
+          <option value="<%= v.id %>" <%= batch && batch.variety_id === v.id ? 'selected' : '' %>><%= v.name %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label" for="location_id">Location</label>
+      <select id="location_id" name="location_id" class="form-input">
+        <option value="">Assign later...</option>
+        <% locations.forEach(l => { %>
+          <option value="<%= l.id %>" <%= batch && batch.location_id === l.id ? 'selected' : '' %>><%= l.name %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="form-label" for="quantity">Quantity</label>
+        <input type="number" id="quantity" name="quantity" class="form-input"
+               value="<%= batch ? batch.quantity || '' : '' %>">
+      </div>
+      <div>
+        <label class="form-label" for="seed_source">Seed Source</label>
+        <input type="text" id="seed_source" name="seed_source" class="form-input"
+               value="<%= batch ? batch.seed_source || '' : '' %>" placeholder="e.g. Johnny's Seeds">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4">
+      <div>
+        <label class="form-label" for="season">Season</label>
+        <select id="season" name="season" class="form-input">
+          <option value="">Select...</option>
+          <% ['Spring','Summer','Fall','Winter'].forEach(s => { %>
+            <option value="<%= s %>" <%= batch && batch.season === s ? 'selected' : '' %>><%= s %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="form-label" for="year">Year</label>
+        <input type="number" id="year" name="year" class="form-input"
+               value="<%= batch ? batch.year : new Date().getFullYear() %>">
+      </div>
+      <div>
+        <label class="form-label" for="planned_seed_date">Planned Seed Date</label>
+        <input type="date" id="planned_seed_date" name="planned_seed_date" class="form-input"
+               value="<%= batch ? batch.planned_seed_date || '' : '' %>">
+      </div>
+    </div>
+
+    <% if (batch) { %>
+      <div class="border-t pt-4 mt-4">
+        <h3 class="font-semibold text-gray-700 mb-3">Milestone Dates</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="form-label" for="actual_seed_date">Actual Seed Date</label>
+            <input type="date" id="actual_seed_date" name="actual_seed_date" class="form-input"
+                   value="<%= batch.actual_seed_date || '' %>">
+          </div>
+          <div>
+            <label class="form-label" for="germination_date">Germination Date</label>
+            <input type="date" id="germination_date" name="germination_date" class="form-input"
+                   value="<%= batch.germination_date || '' %>">
+          </div>
+          <div>
+            <label class="form-label" for="transplant_date">Transplant Date</label>
+            <input type="date" id="transplant_date" name="transplant_date" class="form-input"
+                   value="<%= batch.transplant_date || '' %>">
+          </div>
+          <div>
+            <label class="form-label" for="first_bud_date">First Bud Date</label>
+            <input type="date" id="first_bud_date" name="first_bud_date" class="form-input"
+                   value="<%= batch.first_bud_date || '' %>">
+          </div>
+          <div>
+            <label class="form-label" for="first_bloom_date">First Bloom Date</label>
+            <input type="date" id="first_bloom_date" name="first_bloom_date" class="form-input"
+                   value="<%= batch.first_bloom_date || '' %>">
+          </div>
+          <div>
+            <label class="form-label" for="harvest_start_date">Harvest Start</label>
+            <input type="date" id="harvest_start_date" name="harvest_start_date" class="form-input"
+                   value="<%= batch.harvest_start_date || '' %>">
+          </div>
+          <div>
+            <label class="form-label" for="harvest_end_date">Harvest End</label>
+            <input type="date" id="harvest_end_date" name="harvest_end_date" class="form-input"
+                   value="<%= batch.harvest_end_date || '' %>">
+          </div>
+        </div>
+      </div>
+    <% } %>
+
+    <div>
+      <label class="form-label" for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="3" class="form-input"><%= batch ? batch.notes || '' : '' %></textarea>
+    </div>
+
+    <div class="flex gap-2 pt-2">
+      <button type="submit" class="btn btn-primary"><%= batch ? 'Save Changes' : 'Create Batch' %></button>
+      <a href="/batches" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+document.getElementById('batch-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const data = {
+    variety_id: parseInt(form.variety_id.value),
+    location_id: form.location_id.value ? parseInt(form.location_id.value) : null,
+    quantity: form.quantity.value ? parseInt(form.quantity.value) : null,
+    seed_source: form.seed_source.value,
+    season: form.season.value,
+    year: form.year.value ? parseInt(form.year.value) : null,
+    planned_seed_date: form.planned_seed_date.value,
+    notes: form.notes.value
+  };
+
+  const isEdit = <%= batch ? 'true' : 'false' %>;
+  if (isEdit) {
+    data.actual_seed_date = form.actual_seed_date?.value || null;
+    data.germination_date = form.germination_date?.value || null;
+    data.transplant_date = form.transplant_date?.value || null;
+    data.first_bud_date = form.first_bud_date?.value || null;
+    data.first_bloom_date = form.first_bloom_date?.value || null;
+    data.harvest_start_date = form.harvest_start_date?.value || null;
+    data.harvest_end_date = form.harvest_end_date?.value || null;
+  }
+
+  const url = isEdit ? '/api/batches/<%= batch ? batch.id : '' %>' : '/api/batches';
+  const method = isEdit ? 'PUT' : 'POST';
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      window.location.href = '/batches';
+    } else {
+      const err = await res.json();
+      alert(err.error || 'Failed to save');
+    }
+  } catch (e) {
+    alert('Failed to save batch');
+  }
+});
+</script>
+
+<%- include('../footer') %>

@@ -1,0 +1,194 @@
+<%- include('../header', { title: batch.batch_code }) %>
+
+<%
+const statusOrder = ['planned','seeded','germinating','growing','transplanted','budding','blooming','harvesting','done'];
+const currentIdx = statusOrder.indexOf(batch.status);
+const nextStatus = currentIdx < statusOrder.length - 1 ? statusOrder[currentIdx + 1] : null;
+
+const dateFields = {
+  planned: { field: 'planned_seed_date', label: 'Planned' },
+  seeded: { field: 'actual_seed_date', label: 'Seeded' },
+  germinating: { field: 'germination_date', label: 'Germinated' },
+  transplanted: { field: 'transplant_date', label: 'Transplanted' },
+  budding: { field: 'first_bud_date', label: 'First Bud' },
+  blooming: { field: 'first_bloom_date', label: 'First Bloom' },
+  harvesting: { field: 'harvest_start_date', label: 'Harvest Start' },
+  done: { field: 'harvest_end_date', label: 'Harvest End' }
+};
+%>
+
+<div class="mb-4">
+  <a href="/batches" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back to batches</a>
+</div>
+
+<!-- Header -->
+<div class="card mb-4">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-mono text-sm text-gray-500"><%= batch.batch_code %></span>
+        <span class="badge badge-<%= batch.status %>"><%= batch.status %></span>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 mt-1"><%= batch.variety_name %></h1>
+      <div class="flex gap-3 text-sm text-gray-500 mt-1 flex-wrap">
+        <% if (batch.location_name) { %><span><%= batch.location_name %></span><% } %>
+        <% if (batch.quantity) { %><span><%= batch.quantity %> plants</span><% } %>
+        <% if (batch.seed_source) { %><span>from <%= batch.seed_source %></span><% } %>
+        <% if (batch.season) { %><span><%= batch.season %> <%= batch.year %></span><% } %>
+      </div>
+      <% if (batch.variety_type || batch.variety_color) { %>
+        <div class="flex gap-2 mt-2">
+          <% if (batch.variety_type) { %><span class="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-600"><%= batch.variety_type %></span><% } %>
+          <% if (batch.variety_color) { %><span class="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-600"><%= batch.variety_color %></span><% } %>
+        </div>
+      <% } %>
+    </div>
+    <div class="flex gap-2 shrink-0">
+      <a href="/batches/<%= batch.id %>/edit" class="btn btn-secondary btn-sm">Edit</a>
+      <button onclick="deleteRecord('/api/batches/<%= batch.id %>', '/batches')" class="btn btn-danger btn-sm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick status advance -->
+<% if (nextStatus) { %>
+  <div class="card mb-4 bg-amber-50 border border-amber-200">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <p class="text-sm text-gray-700">
+          Current: <strong class="capitalize"><%= batch.status %></strong>
+        </p>
+      </div>
+      <button onclick="advanceStatus(<%= batch.id %>, '<%= nextStatus %>')"
+              class="btn btn-primary btn-sm">
+        Advance to <%= nextStatus %>
+      </button>
+    </div>
+  </div>
+<% } %>
+
+<!-- Timeline -->
+<div class="card mb-4 overflow-x-auto">
+  <h2 class="text-sm font-semibold text-gray-700 mb-2">Lifecycle Timeline</h2>
+  <div class="timeline-track">
+    <% statusOrder.forEach((s, i) => {
+      const isCompleted = i < currentIdx;
+      const isCurrent = i === currentIdx;
+      const df = dateFields[s];
+      const dateVal = df && batch[df.field];
+    %>
+      <div class="timeline-step">
+        <div class="timeline-dot <%= isCompleted ? 'completed' : '' %> <%= isCurrent ? 'current' : '' %>">
+          <% if (isCompleted) { %>
+            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+          <% } %>
+        </div>
+        <span class="timeline-label"><%= s %></span>
+        <% if (dateVal) { %>
+          <span class="timeline-date"><%= dateVal %></span>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<!-- Batch notes -->
+<div class="card mb-4" id="notes-section">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold text-gray-700">Notes</h2>
+  </div>
+
+  <!-- Quick-add note -->
+  <form id="note-form" class="mb-4 p-3 bg-gray-50 rounded-lg">
+    <div class="flex gap-2 mb-2">
+      <select id="note-category" class="form-input w-auto text-sm">
+        <option value="observation">Observation</option>
+        <option value="milestone">Milestone</option>
+        <option value="issue">Issue</option>
+        <option value="weather">Weather</option>
+        <option value="pest">Pest</option>
+      </select>
+      <input type="date" id="note-date" class="form-input w-auto text-sm"
+             value="<%= new Date().toISOString().split('T')[0] %>">
+    </div>
+    <div class="flex gap-2">
+      <input type="text" id="note-text" placeholder="Add a note..." class="form-input flex-1" required>
+      <button type="submit" class="btn btn-primary btn-sm">Add</button>
+    </div>
+  </form>
+
+  <!-- Notes list -->
+  <div id="notes-list">
+    <% if (notes.length === 0) { %>
+      <p class="text-sm text-gray-400 text-center py-4">No notes yet. Add one above.</p>
+    <% } %>
+    <% notes.forEach(n => { %>
+      <div class="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0 note-<%= n.category %>">
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full
+              <%= n.category === 'observation' ? 'bg-blue-100 text-blue-700' : '' %>
+              <%= n.category === 'issue' ? 'bg-red-100 text-red-700' : '' %>
+              <%= n.category === 'milestone' ? 'bg-green-100 text-green-700' : '' %>
+              <%= n.category === 'weather' ? 'bg-amber-100 text-amber-700' : '' %>
+              <%= n.category === 'pest' ? 'bg-purple-100 text-purple-700' : '' %>
+            "><%= n.category %></span>
+            <span class="text-xs text-gray-400"><%= n.note_date %></span>
+          </div>
+          <p class="text-sm text-gray-700 mt-1"><%= n.note_text %></p>
+        </div>
+        <button onclick="deleteNote(<%= n.id %>)" class="text-gray-300 hover:text-red-500 shrink-0">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<% if (batch.notes) { %>
+  <div class="card">
+    <h2 class="text-sm font-semibold text-gray-700 mb-2">General Notes</h2>
+    <p class="text-sm text-gray-600 whitespace-pre-wrap"><%= batch.notes %></p>
+  </div>
+<% } %>
+
+<script>
+document.getElementById('note-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const noteText = document.getElementById('note-text').value.trim();
+  if (!noteText) return;
+
+  try {
+    const res = await fetch('/api/batches/<%= batch.id %>/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        note_text: noteText,
+        note_date: document.getElementById('note-date').value,
+        category: document.getElementById('note-category').value
+      })
+    });
+    if (res.ok) {
+      window.location.reload();
+    } else {
+      const err = await res.json();
+      alert(err.error || 'Failed to add note');
+    }
+  } catch (e) {
+    alert('Failed to add note');
+  }
+});
+
+async function deleteNote(noteId) {
+  try {
+    const res = await fetch('/api/batches/<%= batch.id %>/notes/' + noteId, { method: 'DELETE' });
+    if (res.ok) {
+      window.location.reload();
+    }
+  } catch (e) {
+    alert('Failed to delete note');
+  }
+}
+</script>
+
+<%- include('../footer') %>

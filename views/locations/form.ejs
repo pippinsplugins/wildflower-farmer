@@ -1,0 +1,87 @@
+<%- include('../header', { title: location ? 'Edit Location' : 'New Location' }) %>
+
+<div class="max-w-2xl">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800"><%= location ? 'Edit' : 'New' %> Location</h1>
+    <% if (location) { %>
+      <button onclick="deleteRecord('/api/locations/<%= location.id %>', '/locations')" class="btn btn-danger btn-sm">Delete</button>
+    <% } %>
+  </div>
+
+  <form id="location-form" class="card space-y-4">
+    <div>
+      <label class="form-label" for="name">Name *</label>
+      <input type="text" id="name" name="name" required class="form-input"
+             value="<%= location ? location.name : '' %>" placeholder='e.g. "North Field Bed 3"'>
+    </div>
+
+    <div>
+      <label class="form-label" for="description">Description</label>
+      <input type="text" id="description" name="description" class="form-input"
+             value="<%= location ? location.description || '' : '' %>" placeholder="Brief description">
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="form-label" for="zone">Zone / Area</label>
+        <input type="text" id="zone" name="zone" class="form-input"
+               value="<%= location ? location.zone || '' : '' %>" placeholder="e.g. North Field">
+      </div>
+      <div>
+        <label class="form-label" for="sun_exposure">Sun Exposure</label>
+        <select id="sun_exposure" name="sun_exposure" class="form-input">
+          <option value="">Select...</option>
+          <option value="Full Sun" <%= location && location.sun_exposure === 'Full Sun' ? 'selected' : '' %>>Full Sun</option>
+          <option value="Partial Shade" <%= location && location.sun_exposure === 'Partial Shade' ? 'selected' : '' %>>Partial Shade</option>
+          <option value="Full Shade" <%= location && location.sun_exposure === 'Full Shade' ? 'selected' : '' %>>Full Shade</option>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="form-label" for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="3" class="form-input"><%= location ? location.notes || '' : '' %></textarea>
+    </div>
+
+    <div class="flex gap-2 pt-2">
+      <button type="submit" class="btn btn-primary"><%= location ? 'Save Changes' : 'Create Location' %></button>
+      <a href="/locations" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+document.getElementById('location-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const data = {
+    name: form.name.value,
+    description: form.description.value,
+    zone: form.zone.value,
+    sun_exposure: form.sun_exposure.value,
+    notes: form.notes.value
+  };
+
+  const isEdit = <%= location ? 'true' : 'false' %>;
+  const url = isEdit ? '/api/locations/<%= location ? location.id : '' %>' : '/api/locations';
+  const method = isEdit ? 'PUT' : 'POST';
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      window.location.href = '/locations';
+    } else {
+      const err = await res.json();
+      alert(err.error || 'Failed to save');
+    }
+  } catch (e) {
+    alert('Failed to save location');
+  }
+});
+</script>
+
+<%- include('../footer') %>

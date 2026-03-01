@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' - ' : '' %>Wildflower Farmer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="bg-amber-50 min-h-screen pb-20 md:pb-0">
+  <!-- Top nav -->
+  <header class="bg-white shadow-sm sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold text-gray-800">
+        <span class="text-xl">&#127803;</span>
+        <span class="hidden sm:inline">Wildflower Farmer</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="hidden md:flex items-center gap-1">
+        <a href="/" class="nav-link <%= currentPath === '/' ? 'nav-active' : '' %>">Dashboard</a>
+        <a href="/varieties" class="nav-link <%= currentPath.startsWith('/varieties') ? 'nav-active' : '' %>">Varieties</a>
+        <a href="/locations" class="nav-link <%= currentPath.startsWith('/locations') ? 'nav-active' : '' %>">Locations</a>
+        <a href="/batches" class="nav-link <%= currentPath.startsWith('/batches') ? 'nav-active' : '' %>">Batches</a>
+      </nav>
+
+      <% if (user) { %>
+        <div class="flex items-center gap-3">
+          <% if (user.avatar_url) { %>
+            <img src="<%= user.avatar_url %>" alt="" class="w-8 h-8 rounded-full">
+          <% } %>
+          <span class="hidden sm:inline text-sm text-gray-600"><%= user.name %></span>
+          <a href="/auth/logout" class="text-sm text-gray-400 hover:text-gray-600">Logout</a>
+        </div>
+      <% } %>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="max-w-6xl mx-auto px-4 py-6">

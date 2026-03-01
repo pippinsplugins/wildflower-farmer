@@ -1,0 +1,42 @@
+<%- include('../header', { title: 'Locations' }) %>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold text-gray-800">Locations</h1>
+  <a href="/locations/new" class="btn btn-primary">+ Add Location</a>
+</div>
+
+<div class="mb-4">
+  <input type="text" id="location-search" placeholder="Search locations..." class="form-input max-w-sm">
+</div>
+
+<% if (locations.length === 0) { %>
+  <div class="empty-state">
+    <div class="empty-state-icon">&#127966;</div>
+    <p class="text-lg font-medium text-gray-600 mb-2">No locations yet</p>
+    <p class="mb-4">Add your beds, fields, and growing spaces.</p>
+    <a href="/locations/new" class="btn btn-primary">+ Add Location</a>
+  </div>
+<% } else { %>
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <% locations.forEach(loc => { %>
+      <a href="/locations/<%= loc.id %>/edit" class="card card-hover block location-item">
+        <h3 class="font-semibold text-gray-800"><%= loc.name %></h3>
+        <div class="flex gap-2 mt-1 flex-wrap">
+          <% if (loc.zone) { %>
+            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full"><%= loc.zone %></span>
+          <% } %>
+          <% if (loc.sun_exposure) { %>
+            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full"><%= loc.sun_exposure %></span>
+          <% } %>
+        </div>
+        <% if (loc.description) { %>
+          <p class="text-sm text-gray-500 mt-2 line-clamp-2"><%= loc.description %></p>
+        <% } %>
+      </a>
+    <% }) %>
+  </div>
+<% } %>
+
+<script>setupSearch('location-search', '.location-item');</script>
+
+<%- include('../footer') %>

@@ -1,0 +1,131 @@
+<%- include('header', { title: 'Dashboard' }) %>
+
+<h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+
+<!-- Quick actions -->
+<div class="flex gap-2 mb-6 flex-wrap">
+  <a href="/batches/new" class="btn btn-primary">+ New Batch</a>
+  <a href="/varieties/new" class="btn btn-secondary">+ Add Variety</a>
+  <a href="/locations/new" class="btn btn-secondary">+ Add Location</a>
+</div>
+
+<!-- Stats row -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <div class="card text-center">
+    <div class="text-2xl font-bold text-gray-800">
+      <%= statusCounts.reduce((sum, s) => sum + s.count, 0) %>
+    </div>
+    <div class="text-xs text-gray-500">Active Batches</div>
+  </div>
+  <div class="card text-center">
+    <div class="text-2xl font-bold text-gray-800"><%= totalVarieties %></div>
+    <div class="text-xs text-gray-500">Varieties</div>
+  </div>
+  <div class="card text-center">
+    <div class="text-2xl font-bold text-gray-800"><%= totalLocations %></div>
+    <div class="text-xs text-gray-500">Locations</div>
+  </div>
+  <div class="card text-center">
+    <div class="text-2xl font-bold text-amber-600">
+      <%= statusCounts.filter(s => s.status === 'blooming' || s.status === 'harvesting').reduce((sum, s) => sum + s.count, 0) %>
+    </div>
+    <div class="text-xs text-gray-500">Blooming / Harvesting</div>
+  </div>
+</div>
+
+<!-- Active batches by status -->
+<% if (statusCounts.length > 0) { %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-700 mb-3">Batches by Status</h2>
+    <div class="flex flex-wrap gap-2">
+      <% statusCounts.forEach(s => { %>
+        <a href="/batches?status=<%= s.status %>" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+          <span class="badge badge-<%= s.status %>"><%= s.status %></span>
+          <span class="text-sm font-semibold text-gray-700"><%= s.count %></span>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+<% } %>
+
+<!-- Upcoming milestones -->
+<% if (upcomingMilestones.length > 0) { %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-700 mb-3">Upcoming Milestones</h2>
+    <div class="space-y-2">
+      <% upcomingMilestones.forEach(b => {
+        let milestone = null;
+        let daysLeft = null;
+
+        if (b.actual_seed_date) {
+          const seedDate = new Date(b.actual_seed_date);
+          const today = new Date();
+          const daysSinceSeed = Math.floor((today - seedDate) / (1000 * 60 * 60 * 24));
+
+          if (b.status === 'seeded' && b.days_to_germination) {
+            daysLeft = b.days_to_germination - daysSinceSeed;
+            milestone = 'germination';
+          } else if (['germinating','growing'].includes(b.status) && b.days_to_transplant) {
+            daysLeft = b.days_to_transplant - daysSinceSeed;
+            milestone = 'transplant';
+          } else if (['transplanted','budding'].includes(b.status) && b.days_to_bloom) {
+            daysLeft = b.days_to_bloom - daysSinceSeed;
+            milestone = 'bloom';
+          }
+        }
+
+        if (milestone && daysLeft !== null) {
+      %>
+        <a href="/batches/<%= b.id %>" class="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+          <div class="flex items-center gap-2">
+            <span class="badge badge-<%= b.status %>"><%= b.status %></span>
+            <span class="text-sm font-medium text-gray-700"><%= b.variety_name %></span>
+            <span class="font-mono text-xs text-gray-400"><%= b.batch_code %></span>
+          </div>
+          <div class="text-right">
+            <% if (daysLeft > 0) { %>
+              <span class="text-sm text-amber-600 font-medium">~<%= daysLeft %>d to <%= milestone %></span>
+            <% } else if (daysLeft === 0) { %>
+              <span class="text-sm text-green-600 font-medium"><%= milestone %> expected today</span>
+            <% } else { %>
+              <span class="text-sm text-red-500 font-medium"><%= milestone %> expected <%= Math.abs(daysLeft) %>d ago</span>
+            <% } %>
+          </div>
+        </a>
+      <% }}) %>
+    </div>
+  </div>
+<% } %>
+
+<!-- Recent activity -->
+<% if (recentBatches.length > 0) { %>
+  <div class="card">
+    <h2 class="text-sm font-semibold text-gray-700 mb-3">Recent Batches</h2>
+    <div class="space-y-2">
+      <% recentBatches.forEach(b => { %>
+        <a href="/batches/<%= b.id %>" class="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="badge badge-<%= b.status %>"><%= b.status %></span>
+            <span class="text-sm font-medium text-gray-700 truncate"><%= b.variety_name %></span>
+            <% if (b.location_name) { %>
+              <span class="text-xs text-gray-400 hidden sm:inline"><%= b.location_name %></span>
+            <% } %>
+          </div>
+          <span class="font-mono text-xs text-gray-400 shrink-0"><%= b.batch_code %></span>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+<% } else { %>
+  <div class="empty-state">
+    <div class="empty-state-icon">&#127793;</div>
+    <p class="text-lg font-medium text-gray-600 mb-2">Welcome to Wildflower Farmer</p>
+    <p class="mb-4">Start by adding some varieties and locations, then create your first batch.</p>
+    <div class="flex gap-2 justify-center">
+      <a href="/varieties/new" class="btn btn-primary">Add Variety</a>
+      <a href="/locations/new" class="btn btn-secondary">Add Location</a>
+    </div>
+  </div>
+<% } %>
+
+<%- include('footer') %>
