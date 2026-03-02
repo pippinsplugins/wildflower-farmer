@@ -73,6 +73,34 @@
       <label for="pinch" class="text-sm text-gray-700">Pinch this variety</label>
     </div>
 
+    <fieldset class="border border-gray-200 rounded-lg p-4 space-y-4">
+      <legend class="text-sm font-semibold text-gray-700 px-2">Growing Notes</legend>
+      <div>
+        <label class="form-label" for="temperature_notes">Temperature Needs</label>
+        <textarea id="temperature_notes" name="temperature_notes" rows="2" class="form-input"><%= variety ? variety.temperature_notes || '' : '' %></textarea>
+      </div>
+      <div>
+        <label class="form-label" for="light_notes">Light Needs</label>
+        <textarea id="light_notes" name="light_notes" rows="2" class="form-input"><%= variety ? variety.light_notes || '' : '' %></textarea>
+      </div>
+      <div>
+        <label class="form-label" for="transplanting_notes">Transplanting Guide</label>
+        <textarea id="transplanting_notes" name="transplanting_notes" rows="2" class="form-input"><%= variety ? variety.transplanting_notes || '' : '' %></textarea>
+      </div>
+      <div>
+        <label class="form-label" for="soil_notes">Soil Needs</label>
+        <textarea id="soil_notes" name="soil_notes" rows="2" class="form-input"><%= variety ? variety.soil_notes || '' : '' %></textarea>
+      </div>
+      <div>
+        <label class="form-label" for="moisture_notes">Moisture Needs</label>
+        <textarea id="moisture_notes" name="moisture_notes" rows="2" class="form-input"><%= variety ? variety.moisture_notes || '' : '' %></textarea>
+      </div>
+      <div>
+        <label class="form-label" for="tray_type_notes">Tray Types</label>
+        <textarea id="tray_type_notes" name="tray_type_notes" rows="2" class="form-input"><%= variety ? variety.tray_type_notes || '' : '' %></textarea>
+      </div>
+    </fieldset>
+
     <div>
       <label class="form-label" for="notes">Notes</label>
       <textarea id="notes" name="notes" rows="3" class="form-input"><%= variety ? variety.notes || '' : '' %></textarea>
@@ -99,6 +127,12 @@ document.getElementById('variety-form').addEventListener('submit', async (e) => 
     spacing_inches: form.spacing_inches.value ? parseInt(form.spacing_inches.value) : null,
     light_requirement: form.light_requirement.value,
     pinch: form.pinch.checked ? 1 : 0,
+    temperature_notes: form.temperature_notes.value,
+    light_notes: form.light_notes.value,
+    transplanting_notes: form.transplanting_notes.value,
+    soil_notes: form.soil_notes.value,
+    moisture_notes: form.moisture_notes.value,
+    tray_type_notes: form.tray_type_notes.value,
     notes: form.notes.value
   };
 

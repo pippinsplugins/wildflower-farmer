@@ -16,4 +16,21 @@ db.pragma('foreign_keys = ON');
 const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 db.exec(schema);
 
+// Migrations for existing databases
+const varietyMigrationColumns = [
+  'temperature_notes TEXT',
+  'light_notes TEXT',
+  'transplanting_notes TEXT',
+  'soil_notes TEXT',
+  'moisture_notes TEXT',
+  'tray_type_notes TEXT'
+];
+for (const col of varietyMigrationColumns) {
+  try {
+    db.exec(`ALTER TABLE varieties ADD COLUMN ${col}`);
+  } catch (e) {
+    // Column already exists
+  }
+}
+
 module.exports = db;

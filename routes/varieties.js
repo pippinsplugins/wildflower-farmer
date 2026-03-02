@@ -21,7 +21,9 @@ router.get('/:id', (req, res) => {
 // POST /api/varieties
 router.post('/', (req, res) => {
   const { name, type, color, days_to_germination, days_to_transplant, days_to_bloom,
-          spacing_inches, light_requirement, pinch, notes } = req.body;
+          spacing_inches, light_requirement, pinch,
+          temperature_notes, light_notes, transplanting_notes, soil_notes, moisture_notes, tray_type_notes,
+          notes } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Name is required' });
@@ -29,12 +31,17 @@ router.post('/', (req, res) => {
 
   const result = db.prepare(`
     INSERT INTO varieties (name, type, color, days_to_germination, days_to_transplant,
-      days_to_bloom, spacing_inches, light_requirement, pinch, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      days_to_bloom, spacing_inches, light_requirement, pinch,
+      temperature_notes, light_notes, transplanting_notes, soil_notes, moisture_notes, tray_type_notes,
+      notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     name.trim(), type || null, color || null,
     days_to_germination || null, days_to_transplant || null, days_to_bloom || null,
-    spacing_inches || null, light_requirement || null, pinch ? 1 : 0, notes || null
+    spacing_inches || null, light_requirement || null, pinch ? 1 : 0,
+    temperature_notes || null, light_notes || null, transplanting_notes || null,
+    soil_notes || null, moisture_notes || null, tray_type_notes || null,
+    notes || null
   );
 
   res.status(201).json({ id: result.lastInsertRowid });
@@ -43,7 +50,9 @@ router.post('/', (req, res) => {
 // PUT /api/varieties/:id
 router.put('/:id', (req, res) => {
   const { name, type, color, days_to_germination, days_to_transplant, days_to_bloom,
-          spacing_inches, light_requirement, pinch, notes } = req.body;
+          spacing_inches, light_requirement, pinch,
+          temperature_notes, light_notes, transplanting_notes, soil_notes, moisture_notes, tray_type_notes,
+          notes } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'Name is required' });
@@ -55,13 +64,18 @@ router.put('/:id', (req, res) => {
   db.prepare(`
     UPDATE varieties SET name = ?, type = ?, color = ?, days_to_germination = ?,
       days_to_transplant = ?, days_to_bloom = ?, spacing_inches = ?,
-      light_requirement = ?, pinch = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+      light_requirement = ?, pinch = ?,
+      temperature_notes = ?, light_notes = ?, transplanting_notes = ?,
+      soil_notes = ?, moisture_notes = ?, tray_type_notes = ?,
+      notes = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
     name.trim(), type || null, color || null,
     days_to_germination || null, days_to_transplant || null, days_to_bloom || null,
-    spacing_inches || null, light_requirement || null, pinch ? 1 : 0, notes || null,
-    req.params.id
+    spacing_inches || null, light_requirement || null, pinch ? 1 : 0,
+    temperature_notes || null, light_notes || null, transplanting_notes || null,
+    soil_notes || null, moisture_notes || null, tray_type_notes || null,
+    notes || null, req.params.id
   );
 
   res.json({ success: true });
