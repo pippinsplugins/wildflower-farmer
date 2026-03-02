@@ -19,6 +19,12 @@ CREATE TABLE IF NOT EXISTS varieties (
   spacing_inches INTEGER,
   light_requirement TEXT,
   pinch INTEGER DEFAULT 0,
+  temperature_notes TEXT,
+  light_notes TEXT,
+  transplanting_notes TEXT,
+  soil_notes TEXT,
+  moisture_notes TEXT,
+  tray_type_notes TEXT,
   notes TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
