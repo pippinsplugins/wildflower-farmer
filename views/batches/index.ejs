@@ -15,7 +15,7 @@
       </button>
     <% }) %>
   </div>
-  <div class="flex flex-wrap gap-2">
+  <div class="flex flex-wrap gap-2 items-center">
     <select onchange="updateFilters('variety_id', this.value)" class="form-input w-auto text-sm">
       <option value="">All Varieties</option>
       <% varieties.forEach(v => { %>
@@ -28,6 +28,14 @@
         <option value="<%= l.id %>" <%= filters.location_id == l.id ? 'selected' : '' %>><%= l.name %></option>
       <% }) %>
     </select>
+    <span class="text-sm text-gray-500 ml-1">Seed date:</span>
+    <input type="date" class="form-input w-auto text-sm"
+           value="<%= filters.date_from || '' %>"
+           onchange="updateFilters('date_from', this.value)">
+    <span class="text-sm text-gray-500">to</span>
+    <input type="date" class="form-input w-auto text-sm"
+           value="<%= filters.date_to || '' %>"
+           onchange="updateFilters('date_to', this.value)">
   </div>
 </div>
 
@@ -35,7 +43,7 @@
   <div class="empty-state">
     <div class="empty-state-icon">&#127793;</div>
     <p class="text-lg font-medium text-gray-600 mb-2">No batches found</p>
-    <% if (filters.status || filters.variety_id || filters.location_id) { %>
+    <% if (filters.status || filters.variety_id || filters.location_id || filters.date_from || filters.date_to) { %>
       <p class="mb-4">Try clearing your filters.</p>
       <a href="/batches" class="btn btn-secondary">Clear Filters</a>
     <% } else { %>

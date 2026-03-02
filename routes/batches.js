@@ -41,7 +41,7 @@ function generateBatchCode(varietyId, year) {
 
 // GET /api/batches
 router.get('/', (req, res) => {
-  const { status, variety_id, location_id, season, year } = req.query;
+  const { status, variety_id, location_id, season, year, date_from, date_to } = req.query;
   let where = [];
   let params = [];
 
@@ -50,6 +50,8 @@ router.get('/', (req, res) => {
   if (location_id) { where.push('b.location_id = ?'); params.push(location_id); }
   if (season) { where.push('b.season = ?'); params.push(season); }
   if (year) { where.push('b.year = ?'); params.push(year); }
+  if (date_from) { where.push('b.planned_seed_date >= ?'); params.push(date_from); }
+  if (date_to) { where.push('b.planned_seed_date <= ?'); params.push(date_to); }
 
   const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
 
