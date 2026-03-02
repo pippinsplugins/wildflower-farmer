@@ -114,23 +114,29 @@ router.get('/calendar', (req, res) => {
     'harvest_start_date', 'harvest_end_date'
   ];
 
-  // A batch overlaps if its earliest date <= gridEnd AND its latest date >= gridStart
-  const minDateExpr = `MIN(${dateFields.map(f => `NULLIF(b.${f}, '')`).join(', ')})`;
-  const maxDateExpr = `MAX(${dateFields.map(f => `NULLIF(b.${f}, '')`).join(', ')})`;
-
-  const batches = db.prepare(`
+  // Query all batches that have at least one date, then compute spans in JS
+  // (SQLite's multi-arg MIN/MAX returns NULL if any arg is NULL, so we can't use it)
+  const allBatches = db.prepare(`
     SELECT b.*, v.name as variety_name, v.color as variety_color,
-           l.name as location_name,
-           ${minDateExpr} as earliest_date,
-           ${maxDateExpr} as latest_date
+           l.name as location_name
     FROM batches b
     LEFT JOIN varieties v ON b.variety_id = v.id
     LEFT JOIN locations l ON b.location_id = l.id
     WHERE (${dateFields.map(f => `b.${f} IS NOT NULL AND b.${f} != ''`).join(' OR ')})
-    GROUP BY b.id
-    HAVING earliest_date <= ? AND latest_date >= ?
-    ORDER BY earliest_date, v.name
-  `).all(gridEndStr, gridStartStr);
+    ORDER BY v.name
+  `).all();
+
+  // Compute earliest/latest dates and filter to visible window
+  const batches = allBatches.map(b => {
+    const dates = dateFields.map(f => b[f]).filter(d => d && d !== '');
+    if (dates.length === 0) return null;
+    dates.sort();
+    b.earliest_date = dates[0];
+    b.latest_date = dates[dates.length - 1];
+    return b;
+  }).filter(b => b && b.earliest_date <= gridEndStr && b.latest_date >= gridStartStr);
+
+  batches.sort((a, b) => a.earliest_date.localeCompare(b.earliest_date) || (a.variety_name || '').localeCompare(b.variety_name || ''));
 
   // Prev/next month params
   let prevMonth = month - 1, prevYear = year;
