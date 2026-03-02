@@ -100,6 +100,32 @@ function updateFilters(group, value) {
   window.location.href = url.toString();
 }
 
+// Calendar: navigate to a specific month
+function navigateCalendar(year, month) {
+  window.location.href = `/calendar?year=${year}&month=${month}`;
+}
+
+// Calendar: show day detail on mobile
+function showDayBatches(dateStr) {
+  if (typeof calendarDayBatches === 'undefined') return;
+  const batches = calendarDayBatches[dateStr] || [];
+  if (batches.length === 0) return;
+
+  const d = new Date(dateStr + 'T00:00:00');
+  const title = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  document.getElementById('dayModalTitle').textContent = title;
+
+  const list = document.getElementById('dayModalList');
+  list.innerHTML = batches.map(b =>
+    `<a href="/batches/${b.id}" class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-sm text-gray-800 no-underline" style="text-decoration:none;">
+      <span style="background-color:${b.bgColor}; color:${b.textColor};" class="badge">${b.status}</span>
+      <span>${b.label}</span>
+    </a>`
+  ).join('');
+
+  document.getElementById('dayModal').style.display = '';
+}
+
 // Client-side search for lists
 function setupSearch(inputId, itemSelector) {
   const input = document.getElementById(inputId);
