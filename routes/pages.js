@@ -81,6 +81,82 @@ router.get('/locations/:id/edit', (req, res) => {
   res.render('locations/form', { location });
 });
 
+// Calendar view
+router.get('/calendar', (req, res) => {
+  const now = new Date();
+  let year = parseInt(req.query.year) || now.getFullYear();
+  let month = parseInt(req.query.month) || (now.getMonth() + 1);
+
+  // Clamp month and adjust year
+  if (month < 1) { month = 12; year--; }
+  if (month > 12) { month = 1; year++; }
+
+  // Calendar grid boundaries
+  const firstOfMonth = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const startDayOfWeek = firstOfMonth.getDay(); // 0=Sun
+
+  // Visible window: include prev/next month overflow days
+  const gridStart = new Date(firstOfMonth);
+  gridStart.setDate(gridStart.getDate() - startDayOfWeek);
+  const totalCells = Math.ceil((startDayOfWeek + daysInMonth) / 7) * 7;
+  const gridEnd = new Date(gridStart);
+  gridEnd.setDate(gridEnd.getDate() + totalCells - 1);
+
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  const gridStartStr = fmt(gridStart);
+  const gridEndStr = fmt(gridEnd);
+
+  // Query batches that overlap the visible window
+  const dateFields = [
+    'planned_seed_date', 'actual_seed_date', 'germination_date',
+    'transplant_date', 'first_bud_date', 'first_bloom_date',
+    'harvest_start_date', 'harvest_end_date'
+  ];
+
+  // Query all batches that have at least one date, then compute spans in JS
+  // (SQLite's multi-arg MIN/MAX returns NULL if any arg is NULL, so we can't use it)
+  const allBatches = db.prepare(`
+    SELECT b.*, v.name as variety_name, v.color as variety_color,
+           l.name as location_name
+    FROM batches b
+    LEFT JOIN varieties v ON b.variety_id = v.id
+    LEFT JOIN locations l ON b.location_id = l.id
+    WHERE (${dateFields.map(f => `b.${f} IS NOT NULL AND b.${f} != ''`).join(' OR ')})
+    ORDER BY v.name
+  `).all();
+
+  // Compute earliest/latest dates and filter to visible window
+  const batches = allBatches.map(b => {
+    const dates = dateFields.map(f => b[f]).filter(d => d && d !== '');
+    if (dates.length === 0) return null;
+    dates.sort();
+    b.earliest_date = dates[0];
+    b.latest_date = dates[dates.length - 1];
+    return b;
+  }).filter(b => b && b.earliest_date <= gridEndStr && b.latest_date >= gridStartStr);
+
+  batches.sort((a, b) => a.earliest_date.localeCompare(b.earliest_date) || (a.variety_name || '').localeCompare(b.variety_name || ''));
+
+  // Prev/next month params
+  let prevMonth = month - 1, prevYear = year;
+  if (prevMonth < 1) { prevMonth = 12; prevYear--; }
+  let nextMonth = month + 1, nextYear = year;
+  if (nextMonth > 12) { nextMonth = 1; nextYear++; }
+
+  const monthNames = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+
+  res.render('calendar', {
+    batches, year, month,
+    monthName: monthNames[month - 1],
+    daysInMonth, startDayOfWeek, totalCells,
+    gridStartStr, gridEndStr,
+    prevMonth, prevYear, nextMonth, nextYear,
+    today: fmt(now)
+  });
+});
+
 // Batches pages
 router.get('/batches', (req, res) => {
   const { status, variety_id, location_id, season, year } = req.query;

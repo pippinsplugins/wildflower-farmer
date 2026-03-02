@@ -1,0 +1,273 @@
+<%- include('header', { title: 'Calendar' }) %>
+
+<%
+  // Status-to-color mapping (matches badge classes)
+  const statusColors = {
+    planned:      { bg: '#e5e7eb', text: '#374151' },
+    seeded:       { bg: '#fef3c7', text: '#92400e' },
+    germinating:  { bg: '#d1fae5', text: '#065f46' },
+    growing:      { bg: '#a7f3d0', text: '#065f46' },
+    transplanted: { bg: '#bfdbfe', text: '#1e40af' },
+    budding:      { bg: '#e9d5ff', text: '#6b21a8' },
+    blooming:     { bg: '#fbcfe8', text: '#9d174d' },
+    harvesting:   { bg: '#fecaca', text: '#991b1b' },
+    done:         { bg: '#d1d5db', text: '#1f2937' }
+  };
+
+  // Build a map: dateStr -> [batch info]
+  const dayBatches = {};
+  const batchSpans = [];
+
+  batches.forEach(b => {
+    if (!b.earliest_date || !b.latest_date) return;
+
+    // Clamp to visible grid
+    const start = b.earliest_date < gridStartStr ? gridStartStr : b.earliest_date;
+    const end = b.latest_date > gridEndStr ? gridEndStr : b.latest_date;
+    const clippedLeft = b.earliest_date < gridStartStr;
+    const clippedRight = b.latest_date > gridEndStr;
+    const colors = statusColors[b.status] || statusColors.planned;
+
+    batchSpans.push({
+      id: b.id,
+      label: (b.variety_name || 'Unknown') + ' ' + b.batch_code,
+      start,
+      end,
+      clippedLeft,
+      clippedRight,
+      bgColor: colors.bg,
+      textColor: colors.text,
+      status: b.status
+    });
+
+    // Also populate per-day map for mobile dots
+    let d = new Date(start + 'T00:00:00');
+    const endD = new Date(end + 'T00:00:00');
+    while (d <= endD) {
+      const key = d.toISOString().slice(0, 10);
+      if (!dayBatches[key]) dayBatches[key] = [];
+      dayBatches[key].push({
+        id: b.id,
+        label: (b.variety_name || 'Unknown') + ' ' + b.batch_code,
+        bgColor: colors.bg,
+        textColor: colors.text,
+        status: b.status
+      });
+      d.setDate(d.getDate() + 1);
+    }
+  });
+
+  // Build calendar grid dates
+  const gridDates = [];
+  const gStart = new Date(gridStartStr + 'T00:00:00');
+  for (let i = 0; i < totalCells; i++) {
+    const d = new Date(gStart);
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayMonth = d.getMonth() + 1;
+    gridDates.push({
+      date: dateStr,
+      day: d.getDate(),
+      isCurrentMonth: dayMonth === month,
+      isToday: dateStr === today
+    });
+  }
+
+  // For bar rendering: compute grid column positions
+  // Each date maps to a column index (0-based)
+  const dateToCol = {};
+  gridDates.forEach((gd, i) => {
+    dateToCol[gd.date] = i;
+  });
+
+  // Group bars by row in each week to handle stacking
+  const numWeeks = totalCells / 7;
+  const MAX_BARS_PER_DAY = 3;
+
+  // Assign a "lane" to each bar within each week-row
+  // A bar spans columns startCol..endCol within its week
+  // We process week by week
+  const weekBarAssignments = []; // array of weeks, each an array of { bar, lane, startCol, endCol }
+
+  for (let w = 0; w < numWeeks; w++) {
+    const weekStart = w * 7;
+    const weekEnd = weekStart + 6;
+    const assignments = [];
+    const lanes = []; // lanes[lane] = last occupied column in that lane
+
+    batchSpans.forEach(bar => {
+      const barStartCol = dateToCol[bar.start];
+      const barEndCol = dateToCol[bar.end];
+      if (barStartCol === undefined || barEndCol === undefined) return;
+
+      // Does this bar intersect this week?
+      if (barEndCol < weekStart || barStartCol > weekEnd) return;
+
+      const clampedStart = Math.max(barStartCol, weekStart);
+      const clampedEnd = Math.min(barEndCol, weekEnd);
+      const relStart = clampedStart - weekStart; // 0-6
+      const relEnd = clampedEnd - weekStart; // 0-6
+
+      // Find first available lane
+      let lane = -1;
+      for (let l = 0; l < lanes.length; l++) {
+        if (lanes[l] < relStart) {
+          lane = l;
+          break;
+        }
+      }
+      if (lane === -1) {
+        lane = lanes.length;
+        lanes.push(-1);
+      }
+      lanes[lane] = relEnd;
+
+      assignments.push({
+        bar,
+        lane,
+        relStart,
+        relEnd,
+        clippedLeft: bar.clippedLeft && barStartCol < weekStart,
+        clippedRight: bar.clippedRight && barEndCol > weekEnd
+      });
+    });
+
+    weekBarAssignments.push(assignments);
+  }
+%>
+
+<!-- Calendar header -->
+<div class="flex items-center justify-between mb-4">
+  <h1 class="text-2xl font-bold text-gray-800"><%= monthName %> <%= year %></h1>
+  <div class="flex items-center gap-2">
+    <a href="/calendar?year=<%= prevYear %>&month=<%= prevMonth %>"
+       class="btn btn-secondary btn-sm" title="Previous month">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <a href="/calendar" class="btn btn-secondary btn-sm">Today</a>
+    <a href="/calendar?year=<%= nextYear %>&month=<%= nextMonth %>"
+       class="btn btn-secondary btn-sm" title="Next month">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+</div>
+
+<!-- Desktop calendar -->
+<div class="calendar-wrapper hidden md:block card p-0 overflow-hidden">
+  <!-- Day of week headers -->
+  <div class="calendar-grid">
+    <% ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => { %>
+      <div class="calendar-day-header"><%= d %></div>
+    <% }) %>
+  </div>
+
+  <!-- Week rows with bars -->
+  <% for (let w = 0; w < numWeeks; w++) {
+    const weekAssignments = weekBarAssignments[w];
+    const maxLane = weekAssignments.reduce((m, a) => Math.max(m, a.lane), -1);
+    const visibleLanes = Math.min(maxLane + 1, MAX_BARS_PER_DAY);
+    const overflowByDay = {};
+
+    // Count overflow per day
+    for (let d = 0; d < 7; d++) {
+      const barsInDay = weekAssignments.filter(a => a.relStart <= d && a.relEnd >= d);
+      if (barsInDay.length > MAX_BARS_PER_DAY) {
+        overflowByDay[d] = barsInDay.length - MAX_BARS_PER_DAY;
+      }
+    }
+  %>
+    <div class="calendar-week">
+      <!-- Day number cells -->
+      <div class="calendar-grid calendar-day-numbers">
+        <% for (let d = 0; d < 7; d++) {
+          const gd = gridDates[w * 7 + d];
+        %>
+          <div class="calendar-day <%= gd.isToday ? 'today' : '' %> <%= !gd.isCurrentMonth ? 'other-month' : '' %>">
+            <span class="calendar-day-number"><%= gd.day %></span>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Bars area -->
+      <div class="calendar-bars" style="height: <%= Math.max(visibleLanes, 0) * 24 + (Object.keys(overflowByDay).length > 0 ? 18 : 0) %>px">
+        <% weekAssignments.forEach(a => {
+          if (a.lane >= MAX_BARS_PER_DAY) return;
+          const leftPct = (a.relStart / 7 * 100).toFixed(2);
+          const widthPct = ((a.relEnd - a.relStart + 1) / 7 * 100).toFixed(2);
+          const topPx = a.lane * 24;
+        %>
+          <a href="/batches/<%= a.bar.id %>"
+             class="calendar-bar"
+             style="left:<%= leftPct %>%; width:<%= widthPct %>%; top:<%= topPx %>px; background-color:<%= a.bar.bgColor %>; color:<%= a.bar.textColor %>;"
+             title="<%= a.bar.label %> (<%= a.bar.status %>)">
+            <span class="calendar-bar-label"><%= a.bar.label %></span>
+          </a>
+        <% }) %>
+
+        <!-- Overflow indicators -->
+        <% Object.entries(overflowByDay).forEach(([d, count]) => {
+          const leftPct = (parseInt(d) / 7 * 100).toFixed(2);
+        %>
+          <div class="calendar-more"
+               style="left:<%= leftPct %>%; top:<%= visibleLanes * 24 %>px;">
+            +<%= count %> more
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<!-- Mobile calendar -->
+<div class="md:hidden">
+  <div class="calendar-grid-mobile">
+    <% ['S','M','T','W','T','F','S'].forEach(d => { %>
+      <div class="calendar-day-header-mobile"><%= d %></div>
+    <% }) %>
+
+    <% gridDates.forEach(gd => {
+      const batchesForDay = dayBatches[gd.date] || [];
+    %>
+      <div class="calendar-day-mobile <%= gd.isToday ? 'today' : '' %> <%= !gd.isCurrentMonth ? 'other-month' : '' %>"
+           <% if (batchesForDay.length > 0) { %>onclick="showDayBatches('<%= gd.date %>')"<% } %>>
+        <span class="calendar-day-number-mobile"><%= gd.day %></span>
+        <% if (batchesForDay.length > 0) { %>
+          <div class="calendar-dots">
+            <% batchesForDay.slice(0, 3).forEach(b => { %>
+              <span class="calendar-dot" style="background-color:<%= b.bgColor %>"></span>
+            <% }) %>
+            <% if (batchesForDay.length > 3) { %>
+              <span class="calendar-dot-more">+<%= batchesForDay.length - 3 %></span>
+            <% } %>
+          </div>
+        <% } %>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<!-- Mobile day detail modal (hidden by default) -->
+<div id="dayModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-content" style="max-width:24rem;">
+    <div class="flex items-center justify-between mb-3">
+      <h3 id="dayModalTitle" class="font-bold text-gray-800"></h3>
+      <button onclick="document.getElementById('dayModal').style.display='none'" class="text-gray-400 hover:text-gray-600">&times;</button>
+    </div>
+    <div id="dayModalList" class="flex flex-col gap-2"></div>
+  </div>
+</div>
+
+<!-- Data for mobile day detail -->
+<script>
+  var calendarDayBatches = <%- JSON.stringify(dayBatches) %>;
+</script>
+
+<% if (batches.length === 0) { %>
+  <div class="empty-state mt-8">
+    <div class="empty-state-icon">&#128197;</div>
+    <p class="text-gray-500 mb-2">No batches with dates in <%= monthName %> <%= year %></p>
+    <a href="/batches/new" class="btn btn-primary">+ New Batch</a>
+  </div>
+<% } %>
+
+<%- include('footer') %>
